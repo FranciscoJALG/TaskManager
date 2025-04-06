@@ -1,43 +1,48 @@
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class TaskDAO {
-    private final String DB_URL = "jdbc:sqlite:database/tasks.db";
+    private Connection conn;
 
-    public TaskDAO() {
-        try (Connection conn = DriverManager.getConnection(DB_URL)) {
-            String sql = "CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT NOT NULL, completed BOOLEAN)";
-            conn.createStatement().execute(sql);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    public TaskDAO() throws SQLException {
+        conn = DriverManager.getConnection("jdbc:sqlite:database/tasks.db");
+        createTable();
     }
 
-    public void addTask(Task task) {
-        String sql = "INSERT INTO tasks(description, completed) VALUES(?, ?)";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, task.getDescription());
-            pstmt.setBoolean(2, task.isCompleted());
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    private void createTable() throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT, completed BOOLEAN)";
+        conn.createStatement().execute(sql);
     }
 
-    public List<Task> getAllTasks() {
+    public void addTask(String description) throws SQLException {
+        String sql = "INSERT INTO tasks (description, completed) VALUES (?, ?)";
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        stmt.setString(1, description);
+        stmt.setBoolean(2, false);
+        stmt.executeUpdate();
+    }
+
+    public List<Task> getAllTasks() throws SQLException {
         List<Task> tasks = new ArrayList<>();
         String sql = "SELECT * FROM tasks";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                tasks.add(new Task(rs.getInt("id"), rs.getString("description"), rs.getBoolean("completed")));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        ResultSet rs = conn.createStatement().executeQuery(sql);
+        while (rs.next()) {
+            tasks.add(new Task(rs.getInt("id"), rs.getString("description"), rs.getBoolean("completed")));
         }
         return tasks;
     }
+
+    public void markAsCompleted(int id) throws SQLException {
+    String sql = "UPDATE tasks SET completed = 1 WHERE id = ?";
+    PreparedStatement stmt = conn.prepareStatement(sql);
+    stmt.setInt(1, id);
+    stmt.executeUpdate();
+}
+
+public void deleteTask(int id) throws SQLException {
+    String sql = "DELETE FROM tasks WHERE id = ?";
+    PreparedStatement stmt = conn.prepareStatement(sql);
+    stmt.setInt(1, id);
+    stmt.executeUpdate();
+}
 }
